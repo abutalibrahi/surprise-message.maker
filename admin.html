@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin Dashboard</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+body{font-family:'Inter',sans-serif;background:linear-gradient(135deg,#0f172a 0%,#1e293b 50%,#0f172a 100%);min-height:100vh}
+.glass-card{background:rgba(30,41,59,0.6);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,0.1);box-shadow:0 8px 32px rgba(0,0,0,0.3)}
+.input-field{background:rgba(15,23,42,0.6);border:1px solid rgba(255,255,255,0.1);transition:all .3s ease;color:#fff}
+.input-field:focus{border-color:#6366f1;box-shadow:0 0 15px rgba(99,102,241,0.3);outline:none}
+.fade-in{animation:fadeIn .5s ease-out forwards}
+@keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.msg-card{transition:all .3s}.msg-card:hover{transform:translateY(-2px);box-shadow:0 8px 25px rgba(0,0,0,0.3)}
+.badge{display:inline-block;padding:2px 10px;border-radius:20px;font-size:11px;font-weight:600}
+.badge-birthday{background:rgba(251,191,36,0.2);color:#fbbf24}.badge-love{background:rgba(236,72,153,0.2);color:#ec4899}.badge-gratitude{background:rgba(52,211,153,0.2);color:#34d399}.badge-friendship{background:rgba(99,102,241,0.2);color:#6366f1}
+.stat-card{background:rgba(30,41,59,0.8);border:1px solid rgba(255,255,255,0.05);border-radius:16px;padding:20px;text-align:center}
+</style>
+</head>
+<body class="text-white min-h-screen">
+<div id="adminLogin" class="min-h-screen flex items-center justify-center p-4">
+<div class="glass-card rounded-2xl p-8 max-w-md w-full text-center fade-in">
+<div class="text-5xl mb-4">🔐</div>
+<h1 class="text-2xl font-bold mb-2">Admin Access</h1>
+<p class="text-slate-400 text-sm mb-6">Enter admin credentials</p>
+<div class="space-y-4">
+<div><input type="text" id="adminUsername" placeholder="Admin username" class="input-field w-full px-4 py-3 rounded-xl"></div>
+<div><input type="password" id="adminPass" placeholder="Admin password" class="input-field w-full px-4 py-3 rounded-xl"></div>
+<button onclick="adminLogin()" id="adminLoginBtn" class="w-full py-3 rounded-xl font-semibold bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 transition-all">Login as Admin</button>
+</div>
+<p id="adminError" class="text-red-400 text-xs mt-3 hidden"></p>
+</div>
+</div><div id="dashboard" class="hidden min-h-screen p-4 md:p-8">
+<div class="max-w-6xl mx-auto">
+<div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+<div><h1 class="text-3xl font-bold bg-gradient-to-r from-indigo-400 to-pink-400 bg-clip-text text-transparent">📊 Admin Dashboard</h1><p class="text-slate-400 text-sm mt-1">All surprise messages</p></div>
+<div class="flex gap-3"><button onclick="refreshData()" class="px-4 py-2 rounded-xl bg-slate-700 hover:bg-slate-600 text-sm transition-colors">🔄 Refresh</button><button onclick="adminLogout()" class="px-4 py-2 rounded-xl bg-red-500/20 hover:bg-red-500/30 text-red-400 text-sm transition-colors">Logout</button></div>
+</div>
+<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+<div class="stat-card"><p class="text-3xl font-bold text-indigo-400" id="statTotal">0</p><p class="text-xs text-slate-400 mt-1">Total</p></div>
+<div class="stat-card"><p class="text-3xl font-bold text-pink-400" id="statToday">0</p><p class="text-xs text-slate-400 mt-1">Today</p></div>
+<div class="stat-card"><p class="text-3xl font-bold text-yellow-400" id="statBirthday">0</p><p class="text-xs text-slate-400 mt-1">Birthdays</p></div>
+<div class="stat-card"><p class="text-3xl font-bold text-green-400" id="statLove">0</p><p class="text-xs text-slate-400 mt-1">Love</p></div>
+</div>
+<div class="mb-6"><input type="text" id="searchBox" oninput="filterMessages()" placeholder="🔍 Search..." class="input-field w-full px-4 py-3 rounded-xl"></div>
+<div id="messagesList" class="space-y-4"></div>
+<div id="noMessages" class="hidden text-center py-16"><div class="text-5xl mb-4">📭</div><p class="text-slate-400">No messages</p></div>
+</div>
+</div>
+<footer class="text-center py-6"><p class="text-slate-600 text-sm">Created by <span class="bg-gradient-to-r from-indigo-400 to-pink-400 bg-clip-text text-transparent font-semibold">Rahi's Enterprise</span> ✨</p></footer><script>
+const SUPABASE_URL='https://wqwtgrjuhnylbsqfoth.supabase.co';
+const SUPABASE_KEY='sb_publishable_IjYFaNTyPvfdJuCXDFRAew_4gY8QJBH';
+const supabase=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+const ADMIN_USERNAME="abutalibrahi@123",ADMIN_PASSWORD="rahitalib@123";
+let allMessages=[];
+async function adminLogin(){const u=document.getElementById('adminUsername').value.trim(),p=document.getElementById('adminPass').value,btn=document.getElementById('adminLoginBtn'),err=document.getElementById('adminError');if(!u||!p){err.textContent='Fill all fields';err.classList.remove('hidden');return}btn.innerHTML='Checking...';btn.disabled=true;if(u===ADMIN_USERNAME&&p===ADMIN_PASSWORD){document.getElementById('adminLogin').classList.add('hidden');document.getElementById('dashboard').classList.remove('hidden');loadMessages();btn.innerHTML='Login as Admin';btn.disabled=false;return}try{const{data}=await supabase.from('users').select('*').eq('username',u).single();if(data&&data.password===p&&data.role==='admin'){document.getElementById('adminLogin').classList.add('hidden');document.getElementById('dashboard').classList.remove('hidden');loadMessages()}else{err.textContent='Invalid credentials';err.classList.remove('hidden')}}catch(e){err.textContent='Login failed';err.classList.remove('hidden')}finally{btn.innerHTML='Login as Admin';btn.disabled=false}}
+function adminLogout(){document.getElementById('dashboard').classList.add('hidden');document.getElementById('adminLogin').classList.remove('hidden');allMessages=[]}
+async function loadMessages(){const{data,error}=await supabase.from('messages').select('*').order('created_at',{ascending:false});if(error){document.getElementById('messagesList').innerHTML='<p class="text-red-400 text-center py-8">Error loading</p>';return}allMessages=data||[];renderMessages(allMessages);updateStats(allMessages)}
+function refreshData(){loadMessages();showToast('Refreshed! 🔄')}
+function renderMessages(msgs){const c=document.getElementById('messagesList'),n=document.getElementById('noMessages');if(!msgs.length){c.innerHTML='';n.classList.remove('hidden');return}n.classList.add('hidden');c.innerHTML=msgs.map(m=>{const d=m.created_at?new Date(m.created_at).toLocaleString('en-IN',{dateStyle:'medium',timeStyle:'short'}):'Unknown';const bc='badge-'+(m.occasion||'friendship');const ol={birthday:'🎂 Birthday',love:'💕 Love',gratitude:'🙏 Gratitude',friendship:'🤝 Friendship'}[m.occasion]||'✨ Special';const img=m.image_url?'<img src="'+m.image_url+'" class="w-full max-h-48 object-cover rounded-lg mt-3" loading="lazy">':'';const ig=m.is_guest||m.sender_username==='Guest';const gb=ig?'<span class="badge" style="background:rgba(251,191,36,0.2);color:#fbbf24;margin-left:6px">👤 Guest</span>':'<span class="badge" style="background:rgba(52,211,153,0.2);color:#34d399;margin-left:6px">✅ @'+esc(m.sender_username||'')+'</span>';return'<div class="msg-card glass-card rounded-2xl p-5 fade-in"><div class="flex flex-col md:flex-row justify-between items-start gap-3 mb-3"><div class="flex-1"><div class="flex items-center gap-2 mb-1 flex-wrap"><span class="badge '+bc+'">'+ol+'</span>'+gb+'<span class="text-xs text-slate-500">'+d+'</span></div><p class="text-sm text-slate-400">From: <span class="text-white font-medium">'+esc(m.sender_name||'?')+'</span></p><p class="text-sm text-slate-400">To: <span class="text-pink-400 font-medium">'+esc(m.receiver_name||'?')+'</span></p></div><button onclick="deleteMsg(\''+m.id+'\')" class="text-xs text-red-400 hover:text-red-300 px-3 py-1 rounded-lg border border-red-500/30 hover:border-red-500 transition-colors whitespace-nowrap">🗑️ Delete</button></div><div class="bg-slate-800/50 rounded-xl p-4 mt-2"><p class="text-slate-200 text-sm leading-relaxed">'+esc(m.message||'')+'</p></div>'+img+'</div>'}).join('')}
+function esc(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML}
+function filterMessages(){const q=document.getElementById('searchBox').value.toLowerCase();if(!q){renderMessages(allMessages);return}renderMessages(allMessages.filter(m=>(m.sender_name||'').toLowerCase().includes(q)||(m.receiver_name||'').toLowerCase().includes(q)||(m.message||'').toLowerCase().includes(q)||(m.sender_username||'').toLowerCase().includes(q)))}
+function updateStats(m){document.getElementById('statTotal').textContent=m.length;const t=new Date();t.setHours(0,0,0,0);document.getElementById('statToday').textContent=m.filter(x=>x.created_at&&new Date(x.created_at)>=t).length;document.getElementById('statBirthday').textContent=m.filter(x=>x.occasion==='birthday').length;document.getElementById('statLove').textContent=m.filter(x=>x.occasion==='love').length}
+async function deleteMsg(id){if(!confirm('Delete permanently?'))return;const{error}=await supabase.from('messages').delete().eq('id',id);if(error)alert('Failed');else{showToast('Deleted 🗑️');loadMessages()}}
+function showToast(m){const t=document.createElement('div');t.className='fixed bottom-4 left-1/2 transform -translate-x-1/2 bg-green-500 text-white px-6 py-2 rounded-full shadow-lg z-50';t.style.animation='fadeIn .3s ease-out';t.textContent=m;document.body.appendChild(t);setTimeout(()=>t.remove(),2000)}
+document.getElementById('adminPass').addEventListener('keypress',e=>{if(e.key==='Enter')adminLogin()});
+</script>
+</body>
+</html>
