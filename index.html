@@ -39,7 +39,8 @@ body{font-family:'Inter',sans-serif;background:linear-gradient(135deg,#0f172a 0%
 <div class="text-center mb-8 fade-in">
 <h1 class="text-4xl font-bold bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent mb-2">✨ Surprise Maker</h1>
 <p class="text-slate-400">Create a magical secret link with photo & message</p>
-</div><div id="authSection" class="glass-card neon-border rounded-2xl p-6 md:p-8 fade-in mb-6" style="animation-delay:.05s">
+</div>
+<div id="authSection" class="glass-card neon-border rounded-2xl p-6 md:p-8 fade-in mb-6" style="animation-delay:.05s">
 <div class="flex items-center justify-between mb-4">
 <h3 class="text-lg font-semibold text-white">👤 Account (Optional)</h3>
 <button onclick="skipLogin()" class="text-xs text-indigo-400 hover:text-indigo-300 px-3 py-1 rounded-lg border border-indigo-500/30 hover:border-indigo-500 transition-colors">Skip & Continue as Guest →</button>
@@ -90,7 +91,8 @@ body{font-family:'Inter',sans-serif;background:linear-gradient(135deg,#0f172a 0%
 <div><label class="block text-sm font-medium text-slate-300 mb-1">Secret Message</label><textarea id="customMessage" required rows="3" maxlength="500" placeholder="Write something heartfelt..." class="input-field w-full px-4 py-3 rounded-xl resize-none"></textarea><div class="text-right text-xs text-slate-500 mt-1"><span id="charCount">0</span>/500</div></div>
 <button type="submit" id="submitBtn" class="btn-primary w-full py-4 rounded-xl font-semibold text-lg shadow-lg flex items-center justify-center gap-2"><span id="btnText">Generate Secret Link</span> 🎁</button>
 </form>
-</div><div id="resultCard" class="hidden glass-card neon-border rounded-2xl p-6 md:p-8 text-center">
+</div>
+<div id="resultCard" class="hidden glass-card neon-border rounded-2xl p-6 md:p-8 text-center">
 <div class="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-4"><svg class="w-8 h-8 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg></div>
 <h2 class="text-2xl font-bold mb-2">Link Ready! 🎉</h2>
 <p class="text-slate-400 text-sm mb-6">Share this link. Only they can open it.</p>
@@ -110,32 +112,237 @@ const SUPABASE_URL='https://wqwtgrjuhnylbsqfoth.supabase.co';
 const SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indxd3d0Z3JqdWhueWxic3Fmb3RoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc3ODc3NjIsImV4cCI6MjEwMzM2Mzc2Mn0.WQL0uSSLmJll-i9TpVOf1OaNhRkEoJa_8pMZ1GbjK_E';
 const supabase=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
 let isGuestMode=false,currentUser=null;
+
 (function(){const c=document.getElementById('particles');for(let i=0;i<15;i++){const p=document.createElement('div');p.className='particle';p.style.left=Math.random()*100+'%';p.style.animationDelay=Math.random()*15+'s';p.style.animationDuration=(10+Math.random()*10)+'s';c.appendChild(p)}})();
+
 document.getElementById('customMessage').addEventListener('input',function(){document.getElementById('charCount').textContent=this.value.length});
+
 function showAuthTab(t){document.getElementById('loginTab').classList.toggle('active',t==='login');document.getElementById('registerTab').classList.toggle('active',t==='register');document.getElementById('loginForm').classList.toggle('hidden',t!=='login');document.getElementById('registerForm').classList.toggle('hidden',t!=='register');document.getElementById('authError').classList.add('hidden');document.getElementById('authSuccess').classList.add('hidden')}
+
 function showAuthError(m){const e=document.getElementById('authError');e.textContent=m;e.classList.remove('hidden');document.getElementById('authSuccess').classList.add('hidden')}
+
 function showAuthSuccess(m){const e=document.getElementById('authSuccess');e.textContent=m;e.classList.remove('hidden');document.getElementById('authError').classList.add('hidden')}
+
 function skipLogin(){isGuestMode=true;currentUser=null;document.getElementById('authSection').classList.add('hidden');document.getElementById('guestBanner').classList.remove('hidden');showToast('Continuing as Guest 👤')}
+
 function showAuthSection(){isGuestMode=false;document.getElementById('guestBanner').classList.add('hidden');document.getElementById('authSection').classList.remove('hidden')}
-async function registerUser(){const name=document.getElementById('regName').value.trim(),username=document.getElementById('regUsername').value.trim(),pass=document.getElementById('regPassword').value;if(!name||!username||!pass){showAuthError('Please fill all fields');return}if(username.length<3){showAuthError('Username min 3 characters');return}if(pass.length<4){showAuthError('Password min 4 characters');return}if(!/^[a-zA-Z0-9@#_.\-]+$/.test(username)){showAuthError('Only letters, numbers, @, #, _, ., -');return}const btn=document.getElementById('regBtn');btn.innerHTML='<span class="spinner"></span> Creating...';btn.disabled=true;try{const{data:ex}=await supabase.from('users').select('id').eq('username',username).single();if(ex){showAuthError('Username taken!');btn.innerHTML='Create Account';btn.disabled=false;return}const{data,error}=await supabase.from('users').insert({username,name,password:pass,role:'user'}).select().single();if(error)throw error;currentUser={uid:data.id,username:data.username,name:data.name};localStorage.setItem('surpriseUser',JSON.stringify(currentUser));showLoggedInState();showAuthSuccess('Welcome '+name+' 🎉');setTimeout(()=>document.getElementById('authSection').classList.add('hidden'),1000)}catch(e){console.error(e);showAuthError('Registration failed')}finally{btn.innerHTML='Create Account';btn.disabled=false}}
-async function loginUser(){const username=document.getElementById('loginUsername').value.trim(),pass=document.getElementById('loginPassword').value;if(!username||!pass){showAuthError('Please fill all fields');return}const btn=document.getElementById('loginBtn');btn.innerHTML='<span class="spinner"></span> Logging in...';btn.disabled=true;try{const{data,error}=await supabase.from('users').select('*').eq('username',username).single();if(error||!data){showAuthError('Username not found!');btn.innerHTML='Login';btn.disabled=false;return}if(data.password!==pass){showAuthError('Wrong password!');btn.innerHTML='Login';btn.disabled=false;return}currentUser={uid:data.id,username:data.username,name:data.name};localStorage.setItem('surpriseUser',JSON.stringify(currentUser));showLoggedInState();showAuthSuccess('Welcome back, '+data.name+'! 👋');setTimeout(()=>document.getElementById('authSection').classList.add('hidden'),1000)}catch(e){console.error(e);showAuthError('Login failed')}finally{btn.innerHTML='Login';btn.disabled=false}}
-function showLoggedInState(){isGuestMode=false;document.getElementById('authSection').classList.add('hidden');document.getElementById('guestBanner').classList.add('hidden');document.getElementById('loggedInSection').classList.remove('hidden');document.getElementById('formCard').classList.remove('hidden');document.getElementById('userName').textContent=currentUser.name;document.getElementById('userUsername').textContent='@'+currentUser.username;document.getElementById('userAvatar').textContent=currentUser.name.charAt(0).toUpperCase();document.getElementById('senderName').value=currentUser.name}
-function logoutUser(){currentUser=null;isGuestMode=false;localStorage.removeItem('surpriseUser');document.getElementById('loggedInSection').classList.add('hidden');document.getElementById('authSection').classList.remove('hidden');showToast('Logged out')}
-(function(){const s=localStorage.getItem('surpriseUser');if(s){try{currentUser=JSON.parse(s);showLoggedInState()}catch(e){localStorage.removeItem('surpriseUser')}}})();
-let uploadedImageURL=null,selectedFile=null;const MAX_UPLOAD_SIZE=5*1024*1024;
+
+async function registerUser(){
+const name=document.getElementById('regName').value.trim();
+const username=document.getElementById('regUsername').value.trim();
+const pass=document.getElementById('regPassword').value;
+if(!name||!username||!pass){showAuthError('Please fill all fields');return}
+if(username.length<3){showAuthError('Username min 3 characters');return}
+if(pass.length<4){showAuthError('Password min 4 characters');return}
+if(!/^[a-zA-Z0-9@#_.\-]+$/.test(username)){showAuthError('Only letters, numbers, @, #, _, ., - allowed');return}
+const btn=document.getElementById('regBtn');
+btn.innerHTML='<span class="spinner"></span> Creating...';
+btn.disabled=true;
+try{
+const{data:existing}=await supabase.from('users').select('id').eq('username',username).limit(1);
+if(existing&&existing.length>0){showAuthError('Username already taken! Try another.');btn.innerHTML='<span id="regBtnText">Create Account</span>';btn.disabled=false;return}
+const{data,error}=await supabase.from('users').insert({username:username,name:name,password:pass,role:'user'}).select().single();
+if(error){console.error('Insert error:',error);showAuthError('Error: '+error.message);btn.innerHTML='<span id="regBtnText">Create Account</span>';btn.disabled=false;return}
+currentUser={uid:data.id,username:data.username,name:data.name};
+localStorage.setItem('surpriseUser',JSON.stringify(currentUser));
+showLoggedInState();
+showAuthSuccess('Welcome '+name+' 🎉 Account created!');
+setTimeout(()=>{document.getElementById('authSection').classList.add('hidden')},1500);
+}catch(e){console.error('Register error:',e);showAuthError('Registration failed: '+e.message);btn.innerHTML='<span id="regBtnText">Create Account</span>';btn.disabled=false}
+}
+
+async function loginUser(){
+const username=document.getElementById('loginUsername').value.trim();
+const pass=document.getElementById('loginPassword').value;
+if(!username||!pass){showAuthError('Please fill all fields');return}
+const btn=document.getElementById('loginBtn');
+btn.innerHTML='<span class="spinner"></span> Logging in...';
+btn.disabled=true;
+try{
+const{data,error}=await supabase.from('users').select('*').eq('username',username).limit(1);
+if(error){console.error('Login query error:',error);showAuthError('Error: '+error.message);btn.innerHTML='<span id="loginBtnText">Login</span>';btn.disabled=false;return}
+if(!data||data.length===0){showAuthError('Username not found! Register first.');btn.innerHTML='<span id="loginBtnText">Login</span>';btn.disabled=false;return}
+const user=data[0];
+if(user.password!==pass){showAuthError('Wrong password!');btn.innerHTML='<span id="loginBtnText">Login</span>';btn.disabled=false;return}
+currentUser={uid:user.id,username:user.username,name:user.name};
+localStorage.setItem('surpriseUser',JSON.stringify(currentUser));
+showLoggedInState();
+showAuthSuccess('Welcome back, '+user.name+'! 👋');
+setTimeout(()=>{document.getElementById('authSection').classList.add('hidden')},1500);
+}catch(e){console.error('Login error:',e);showAuthError('Login failed: '+e.message);btn.innerHTML='<span id="loginBtnText">Login</span>';btn.disabled=false}
+}
+
+function showLoggedInState(){
+isGuestMode=false;
+document.getElementById('authSection').classList.add('hidden');
+document.getElementById('guestBanner').classList.add('hidden');
+document.getElementById('loggedInSection').classList.remove('hidden');
+document.getElementById('formCard').classList.remove('hidden');
+document.getElementById('userName').textContent=currentUser.name;
+document.getElementById('userUsername').textContent='@'+currentUser.username;
+document.getElementById('userAvatar').textContent=currentUser.name.charAt(0).toUpperCase();
+document.getElementById('senderName').value=currentUser.name;
+}
+
+function logoutUser(){
+currentUser=null;isGuestMode=false;
+localStorage.removeItem('surpriseUser');
+document.getElementById('loggedInSection').classList.add('hidden');
+document.getElementById('authSection').classList.remove('hidden');
+showToast('Logged out');
+}
+
+(function(){const s=localStorage.getItem('surpriseUser');if(s){try{currentUser=JSON.parse(s);showLoggedInState()}catch(e){localStorage.removeItem('surpriseUser')}}})();let uploadedImageURL=null,selectedFile=null;
+const MAX_UPLOAD_SIZE=5*1024*1024;
 const uploadArea=document.getElementById('uploadArea'),imageInput=document.getElementById('imageInput'),uploadPlaceholder=document.getElementById('uploadPlaceholder'),uploadPreview=document.getElementById('uploadPreview'),previewImg=document.getElementById('previewImg'),imgSizeLabel=document.getElementById('imgSizeLabel'),imgError=document.getElementById('imgError'),uploadProgress=document.getElementById('uploadProgress'),progressBar=document.getElementById('progressBar'),progressPercent=document.getElementById('progressPercent');
+
 ['dragenter','dragover'].forEach(e=>{uploadArea.addEventListener(e,ev=>{ev.preventDefault();uploadArea.classList.add('dragover')})});
 ['dragleave','drop'].forEach(e=>{uploadArea.addEventListener(e,ev=>{ev.preventDefault();uploadArea.classList.remove('dragover')})});
-imageInput.addEventListener('change',function(e){const f=e.target.files[0];if(!f)return;imgError.classList.add('hidden');if(!f.type.startsWith('image/')){showImgError('Image file only!');return}if(f.size>MAX_UPLOAD_SIZE){showImgError('Max 5MB!');return}selectedFile=f;const r=new FileReader();r.onload=ev=>{previewImg.src=ev.target.result;imgSizeLabel.textContent='📎 '+Math.round(f.size/1024)+'KB';uploadPlaceholder.classList.add('hidden');uploadPreview.classList.remove('hidden');uploadArea.classList.add('has-image')};r.readAsDataURL(f)});
+
+imageInput.addEventListener('change',function(e){
+const f=e.target.files[0];if(!f)return;
+imgError.classList.add('hidden');
+if(!f.type.startsWith('image/')){showImgError('Please select an image file!');return}
+if(f.size>MAX_UPLOAD_SIZE){showImgError('Max 5MB allowed! Your file is '+Math.round(f.size/1024/1024)+'MB');return}
+selectedFile=f;
+const r=new FileReader();
+r.onload=ev=>{previewImg.src=ev.target.result;imgSizeLabel.textContent='📎 '+f.name+' ('+Math.round(f.size/1024)+'KB)';uploadPlaceholder.classList.add('hidden');uploadPreview.classList.remove('hidden');uploadArea.classList.add('has-image')};
+r.readAsDataURL(f);
+});
+
 function removeImage(e){e.preventDefault();e.stopPropagation();selectedFile=null;uploadedImageURL=null;imageInput.value='';uploadPlaceholder.classList.remove('hidden');uploadPreview.classList.add('hidden');uploadArea.classList.remove('has-image');imgError.classList.add('hidden');uploadProgress.classList.add('hidden')}
+
 function showImgError(m){imgError.textContent=m;imgError.classList.remove('hidden');selectedFile=null;imageInput.value=''}
-async function uploadToSupabase(file){const n=Date.now()+'_'+Math.random().toString(36).substr(2,9)+'.jpg';const{error}=await supabase.storage.from('surprise-photos').upload(n,file,{cacheControl:'3600',upsert:false});if(error)throw error;const{data}=supabase.storage.from('surprise-photos').getPublicUrl(n);return data.publicUrl}
+
+async function uploadToSupabase(file){
+const ext=file.name.split('.').pop()||'jpg';
+const fileName=Date.now()+'_'+Math.random().toString(36).substr(2,9)+'.'+ext;
+console.log('Uploading file:',fileName,'Size:',file.size,'Type:',file.type);
+const{data,error}=await supabase.storage.from('surprise-photos').upload(fileName,file,{contentType:file.type,cacheControl:'3600',upsert:false});
+if(error){console.error('Upload error:',error);throw new Error(error.message)}
+const{data:urlData}=supabase.storage.from('surprise-photos').getPublicUrl(fileName);
+console.log('Upload success! URL:',urlData.publicUrl);
+return urlData.publicUrl;
+}
+
 let generatedURL='';
-document.getElementById('surpriseForm').addEventListener('submit',async function(e){e.preventDefault();const btn=document.getElementById('submitBtn'),btnText=document.getElementById('btnText');try{const data={s:document.getElementById('senderName').value.trim(),r:document.getElementById('receiverName').value.trim(),o:document.getElementById('occasion').value,m:document.getElementById('customMessage').value.trim()};if(!data.s||!data.r||!data.o||!data.m){alert("Fill all fields!");return}btn.disabled=true;if(selectedFile&&!uploadedImageURL){btnText.innerHTML='<span class="spinner"></span> Uploading...';try{uploadedImageURL=await uploadToSupabase(selectedFile);data.img=uploadedImageURL}catch(er){alert("Upload failed");btn.disabled=false;btnText.textContent='Generate Secret Link';return}}else if(uploadedImageURL)data.img=uploadedImageURL;btnText.innerHTML='<span class="spinner"></span> Generating...';try{await supabase.from('messages').insert({sender_id:currentUser?currentUser.uid:'guest_'+Date.now(),sender_name:data.s,sender_username:currentUser?currentUser.username:'Guest',receiver_name:data.r,occasion:data.o,message:data.m,image_url:data.img||null,is_guest:!currentUser,status:'sent'})}catch(de){console.error(de)}setTimeout(()=>{try{const enc=btoa(unescape(encodeURIComponent(JSON.stringify(data))));const bp=window.location.href.substring(0,window.location.href.lastIndexOf('/')+1);generatedURL=bp+'reveal.html?d='+enc;document.getElementById('generatedLink').textContent=generatedURL;document.getElementById('formCard').classList.add('hidden');document.getElementById('resultCard').classList.remove('hidden');document.getElementById('resultCard').scrollIntoView({behavior:'smooth'})}catch(er){alert("Failed")}finally{btn.disabled=false;btnText.textContent='Generate Secret Link'}},100)}catch(er){alert("Error");btn.disabled=false;btnText.textContent='Generate Secret Link'}});
-function copyLink(){if(!generatedURL)return;if(navigator.clipboard&&window.isSecureContext)navigator.clipboard.writeText(generatedURL).then(()=>showToast("Copied!"));else{const t=document.createElement('textarea');t.value=generatedURL;t.style.position='fixed';t.style.opacity='0';document.body.appendChild(t);t.select();try{document.execCommand('copy');showToast("Copied!")}catch(e){alert("Long-press to copy")}document.body.removeChild(t)}}
-function shareWhatsApp(){if(!generatedURL)return;window.open("https://wa.me/?text="+encodeURIComponent("Hey! Secret surprise for you 🎁\n"+generatedURL),'_blank')}
-function resetForm(){document.getElementById('surpriseForm').reset();document.getElementById('charCount').textContent='0';removeImage(new Event('click'));uploadedImageURL=null;document.getElementById('resultCard').classList.add('hidden');document.getElementById('formCard').classList.remove('hidden')}
-function showToast(m){const t=document.createElement('div');t.className='fixed bottom-4 left-1/2 transform -translate-x-1/2 bg-green-500 text-white px-6 py-2 rounded-full shadow-lg z-50 fade-in';t.textContent=m;document.body.appendChild(t);setTimeout(()=>t.remove(),2000)}
+
+document.getElementById('surpriseForm').addEventListener('submit',async function(e){
+e.preventDefault();
+const btn=document.getElementById('submitBtn'),btnText=document.getElementById('btnText');
+try{
+const msgData={
+s:document.getElementById('senderName').value.trim(),
+r:document.getElementById('receiverName').value.trim(),
+o:document.getElementById('occasion').value,
+m:document.getElementById('customMessage').value.trim()
+};
+if(!msgData.s||!msgData.r||!msgData.o||!msgData.m){alert('Please fill all required fields!');return}
+
+btn.disabled=true;
+
+if(selectedFile&&!uploadedImageURL){
+btnText.innerHTML='<span class="spinner"></span> Uploading photo...';
+try{
+uploadedImageURL=await uploadToSupabase(selectedFile);
+msgData.img=uploadedImageURL;
+showToast('Photo uploaded! 📸');
+}catch(uploadErr){
+console.error('Upload failed:',uploadErr);
+showImgError('Upload failed: '+uploadErr.message);
+btn.disabled=false;
+btnText.innerHTML='<span id="btnText">Generate Secret Link</span> 🎁';
+return;
+}
+}else if(uploadedImageURL){
+msgData.img=uploadedImageURL;
+}
+
+btnText.innerHTML='<span class="spinner"></span> Saving message...';
+try{
+const dbRecord={
+sender_id:currentUser?String(currentUser.uid):'guest_'+Date.now(),
+sender_name:msgData.s,
+sender_username:currentUser?currentUser.username:'Guest',
+receiver_name:msgData.r,
+occasion:msgData.o,
+message:msgData.m,
+image_url:msgData.img||null,
+is_guest:!currentUser,
+status:'sent'
+};
+const{error:dbError}=await supabase.from('messages').insert(dbRecord);
+if(dbError){console.error('DB save error:',dbError)}else{console.log('Message saved to DB!')}
+}catch(dbErr){console.error('DB catch:',dbErr)}
+
+btnText.innerHTML='<span class="spinner"></span> Generating link...';
+
+try{
+const jsonStr=JSON.stringify(msgData);
+const encoded=btoa(unescape(encodeURIComponent(jsonStr)));
+const basePath=window.location.href.substring(0,window.location.href.lastIndexOf('/')+1);
+generatedURL=basePath+'reveal.html?d='+encoded;
+console.log('Generated URL:',generatedURL);
+document.getElementById('generatedLink').textContent=generatedURL;
+document.getElementById('formCard').classList.add('hidden');
+document.getElementById('resultCard').classList.remove('hidden');
+document.getElementById('resultCard').scrollIntoView({behavior:'smooth'});
+showToast('Link generated! 🎉');
+}catch(encErr){
+console.error('Encode error:',encErr);
+alert('Failed to generate link: '+encErr.message);
+}
+
+btn.disabled=false;
+btnText.innerHTML='<span id="btnText">Generate Secret Link</span> 🎁';
+
+}catch(mainErr){
+console.error('Submit error:',mainErr);
+alert('Something went wrong: '+mainErr.message);
+btn.disabled=false;
+btnText.innerHTML='<span id="btnText">Generate Secret Link</span> 🎁';
+}
+});
+
+function copyLink(){
+if(!generatedURL)return;
+if(navigator.clipboard&&window.isSecureContext){
+navigator.clipboard.writeText(generatedURL).then(()=>showToast('Copied to clipboard! ✅')).catch(()=>fallbackCopy());
+}else{fallbackCopy()}
+}
+
+function fallbackCopy(){
+const t=document.createElement('textarea');
+t.value=generatedURL;t.style.position='fixed';t.style.opacity='0';
+document.body.appendChild(t);t.select();
+try{document.execCommand('copy');showToast('Copied! ✅')}catch(e){alert('Long-press the link above to copy')}
+document.body.removeChild(t);
+}
+
+function shareWhatsApp(){
+if(!generatedURL)return;
+const text='Hey! I have a secret surprise for you 🎁✨\n\nOpen this link:\n'+generatedURL;
+window.open('https://wa.me/?text='+encodeURIComponent(text),'_blank');
+}
+
+function resetForm(){
+document.getElementById('surpriseForm').reset();
+document.getElementById('charCount').textContent='0';
+removeImage(new Event('click'));
+uploadedImageURL=null;
+generatedURL='';
+document.getElementById('resultCard').classList.add('hidden');
+document.getElementById('formCard').classList.remove('hidden');
+window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function showToast(m){
+const t=document.createElement('div');
+t.className='fixed bottom-4 left-1/2 transform -translate-x-1/2 bg-green-500 text-white px-6 py-3 rounded-full shadow-lg z-50 fade-in text-sm font-medium';
+t.textContent=m;
+document.body.appendChild(t);
+setTimeout(()=>{t.style.opacity='0';t.style.transition='opacity .3s';setTimeout(()=>t.remove(),300)},2500);
+}
 </script>
 </body>
 </html>
